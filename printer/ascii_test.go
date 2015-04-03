@@ -23,7 +23,7 @@ var _ = Describe("Ascii", func() {
 			a = LoadFixture("../FIXTURES/base.json")
 			b = LoadFixture("../FIXTURES/base_changed.json")
 
-			diff := diff.Compare(a, b)
+			diff := diff.CompareObjects(a, b)
 			Expect(diff.Modified()).To(BeTrue())
 
 			printer := NewAsciiPrinter()
@@ -78,12 +78,12 @@ var _ = Describe("Ascii", func() {
 			a = LoadFixture("../FIXTURES/add_delete_from.json")
 			b = LoadFixture("../FIXTURES/add_delete_to.json")
 
-			diff := diff.Compare(a, b)
+			diff := diff.CompareObjects(a, b)
 			Expect(diff.Modified()).To(BeTrue())
 
 			printer := NewAsciiPrinter()
 			diff.Iterate(printer)
-			Expect(colorFilter.ReplaceAllString(printer.Result(), "")).To(
+			Expect(printer.ResultWithoutColor()).To(
 				Equal(
 					` {
 +  "add": {

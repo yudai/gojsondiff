@@ -5,6 +5,7 @@ import (
 	"github.com/k0kubun/pp"
 	diff "github.com/yudai/gojsondiff"
 	"reflect"
+	"regexp"
 	"sort"
 	"strconv"
 )
@@ -16,12 +17,6 @@ func NewAsciiPrinter() *AsciiPrinter {
 		inArray: []bool{},
 	}
 }
-
-const (
-	same    = " "
-	added   = "+"
-	deleted = "-"
-)
 
 type AsciiPrinter struct {
 	buffer  string
@@ -102,6 +97,11 @@ func (i *AsciiPrinter) Result() string {
 	return i.buffer
 }
 
+func (i *AsciiPrinter) ResultWithoutColor() string {
+	colorFilter, _ := regexp.Compile("\\x1b\\[[0-9;]*m")
+	return colorFilter.ReplaceAllString(i.buffer, "")
+}
+
 func (i *AsciiPrinter) push(name string, size int, array bool) {
 	i.path = append(i.path, name)
 	i.size = append(i.size, size)
@@ -160,6 +160,12 @@ func (i *AsciiPrinter) printRecursive(name string, value interface{}, marker str
 		i.printComma()
 	}
 }
+
+const (
+	same    = " "
+	added   = "+"
+	deleted = "-"
+)
 
 func (i *AsciiPrinter) printIndent(marker string) {
 	i.print(marker)
