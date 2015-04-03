@@ -83,7 +83,9 @@ func (i *AsciiPrinter) VisitAdded(name string, d diff.Added) bool {
 }
 
 func (i *AsciiPrinter) VisitModified(name string, d diff.Modified) bool {
+	savedSize := i.size[len(i.size)-1]
 	i.printRecursive(name, d.OldValue, deleted)
+	i.size[len(i.size)-1] = savedSize
 	i.printRecursive(name, d.NewValue, added)
 	return false
 }

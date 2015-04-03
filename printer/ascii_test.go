@@ -61,7 +61,7 @@ var _ = Describe("Ascii", func() {
 -    "num": 19,
      "obj": {
 -      "num": 14,
-+      "num": 9999
++      "num": 9999,
 -      "str": "efj3"
 +      "str": "changed"
      },
