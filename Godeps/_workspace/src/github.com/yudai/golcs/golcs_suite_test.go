@@ -1,4 +1,4 @@
-package printer_test
+package lcs_test
 
 import (
 	. "github.com/onsi/ginkgo"
@@ -7,7 +7,7 @@ import (
 	"testing"
 )
 
-func TestPrinter(t *testing.T) {
+func TestGolcs(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Printer Suite")
+	RunSpecs(t, "Golcs Suite")
 }

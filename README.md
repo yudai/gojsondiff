@@ -1,8 +1,8 @@
-# Go JSON Diff
+# Go JSON Diff (and Patch)
 
 ## How to use
 
-### Getting code
+### Instllation
 
 ```sh
 go get github.com/yudai/gojsondiff
@@ -17,16 +17,17 @@ See `jd/main.go` for how to use this library.
 
 This repository contains a package that you can use as a CLI tool.
 
-### How to install
+### Instllation
 
 ```sh
 go get github.com/yudai/gojsondiff/jd
-go install github.com/yudai/gojsondiff/jd
 ```
 
 ### Usage
 
-Just give two json files:
+#### Diff
+
+Just give two json files to the `jd` command:
 
 ```sh
 jd one.json another.json
@@ -75,6 +76,73 @@ Outputs would be something like:
    "str": "abcde"
  }
 ```
+
+When you prefer the delta foramt of [jsondiffpatch](https://github.com/benjamine/jsondiffpatch), add the `-f delta` option.
+
+```sh
+jd -f delta one.json another.json
+```
+
+This command shows:
+
+```json
+{
+  "arr": {
+    "2": {
+      "str": [
+        "pek3f",
+        "changed"
+      ]
+    },
+    "3": {
+      "1": [
+        "1",
+        "changed"
+      ],
+      "_t": "a"
+    },
+    "_t": "a"
+  },
+  "obj": {
+    "arr": {
+      "2": {
+        "str": [
+          "eafeb",
+          "changed"
+        ]
+      },
+      "_t": "a"
+    },
+    "new": [
+      "added"
+    ],
+    "num": [
+      19,
+      0,
+      0
+    ],
+    "obj": {
+      "num": [
+        14,
+        9999
+      ],
+      "str": [
+        "efj3",
+        "changed"
+      ]
+    }
+  }
+}
+```
+
+#### Patch
+
+Give a diff file in the delta format and the JSON file to the `jp` command.
+
+```sh
+jp diff.delta one.json
+```
+
 
 ## License
 

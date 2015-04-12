@@ -1,13 +1,11 @@
-package printer_test
+package formatter_test
 
 import (
-	. "github.com/yudai/gojsondiff/printer"
+	. "github.com/yudai/gojsondiff/formatter"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	. "github.com/yudai/gojsondiff/test"
-
-	"regexp"
 
 	diff "github.com/yudai/gojsondiff"
 )
@@ -15,34 +13,33 @@ import (
 var _ = Describe("Ascii", func() {
 	Describe("AsciiPrinter", func() {
 		var (
-			a, b           map[string]interface{}
-			colorFilter, _ = regexp.Compile("\\x1b\\[[0-9;]*m")
+			a, b map[string]interface{}
 		)
 
 		It("Prints the given diff", func() {
 			a = LoadFixture("../FIXTURES/base.json")
 			b = LoadFixture("../FIXTURES/base_changed.json")
 
-			diff := diff.CompareObjects(a, b)
+			diff := diff.New().CompareObjects(a, b)
 			Expect(diff.Modified()).To(BeTrue())
 
-			printer := NewAsciiPrinter()
-			diff.Iterate(printer)
-			Expect(colorFilter.ReplaceAllString(printer.Result(), "")).To(
-				Equal(
-					` {
+			f := NewAsciiFormatter(a)
+			deltaJson, err := f.Format(diff)
+			Expect(err).To(BeNil())
+			Expect(deltaJson).To(Equal(
+				` {
    "arr": [
-     0: "arr0",
-     1: 21,
-     2: {
+     "arr0",
+     21,
+     {
        "num": 1,
 -      "str": "pek3f"
 +      "str": "changed"
      },
-     3: [
-       0: 0,
--      1: "1"
-+      1: "changed"
+     [
+       0,
+-      "1"
++      "changed"
      ]
    ],
    "bool": true,
@@ -50,14 +47,13 @@ var _ = Describe("Ascii", func() {
    "num_int": 13,
    "obj": {
      "arr": [
-       0: 17,
-       1: "str",
-       2: {
+       17,
+       "str",
+       {
 -        "str": "eafeb"
 +        "str": "changed"
        }
      ],
-+    "new": "added",
 -    "num": 19,
      "obj": {
 -      "num": 14,
@@ -66,11 +62,12 @@ var _ = Describe("Ascii", func() {
 +      "str": "changed"
      },
      "str": "bcded"
++    "new": "added"
    },
    "str": "abcde"
  }
 `,
-				),
+			),
 			)
 		})
 
@@ -78,33 +75,19 @@ var _ = Describe("Ascii", func() {
 			a = LoadFixture("../FIXTURES/add_delete_from.json")
 			b = LoadFixture("../FIXTURES/add_delete_to.json")
 
-			diff := diff.CompareObjects(a, b)
+			diff := diff.New().CompareObjects(a, b)
 			Expect(diff.Modified()).To(BeTrue())
 
-			printer := NewAsciiPrinter()
-			diff.Iterate(printer)
-			Expect(printer.ResultWithoutColor()).To(
-				Equal(
-					` {
-+  "add": {
-+    "l0a": [
-+      0: "abcd",
-+      1: [
-+        0: "efcg"
-+      ]
-+    ],
-+    "l0o": {
-+      "l1o": {
-+        "l2s": "efed"
-+      },
-+      "l1s": "abcd"
-+    }
-+  },
+			f := NewAsciiFormatter(a)
+			deltaJson, err := f.Format(diff)
+			Expect(err).To(BeNil())
+			Expect(deltaJson).To(Equal(
+				` {
 -  "delete": {
 -    "l0a": [
--      0: "abcd",
--      1: [
--        0: "efcg"
+-      "abcd",
+-      [
+-        "efcg"
 -      ]
 -    ],
 -    "l0o": {
@@ -114,9 +97,23 @@ var _ = Describe("Ascii", func() {
 -      "l1s": "abcd"
 -    }
 -  }
++  "add": {
++    "l0a": [
++      "abcd",
++      [
++        "efcg"
++      ]
++    ],
++    "l0o": {
++      "l1o": {
++        "l2s": "efed"
++      },
++      "l1s": "abcd"
++    }
++  }
  }
 `,
-				),
+			),
 			)
 		})
 	})
