@@ -63,7 +63,7 @@ func main() {
 		format := c.String("format")
 		var diffString string
 		if format == "ascii" {
-			var aJson map[string]interface{}
+			var aJson interface{}
 			json.Unmarshal(aString, &aJson)
 			formatter := formatter.NewAsciiFormatter(aJson)
 			formatter.ShowArrayIndex = true
@@ -71,7 +71,6 @@ func main() {
 			if err != nil {
 				// No error can occur
 			}
-			fmt.Print(diffString)
 		} else if format == "delta" {
 			formatter := formatter.NewDeltaFormatter()
 			diffString, err = formatter.Format(d)

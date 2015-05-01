@@ -6,9 +6,10 @@ import (
 	"sort"
 
 	diff "github.com/yudai/gojsondiff"
+	"github.com/yudai/pp"
 )
 
-func NewAsciiFormatter(left map[string]interface{}) *AsciiFormatter {
+func NewAsciiFormatter(left interface{}) *AsciiFormatter {
 	return &AsciiFormatter{
 		left:           left,
 		ShowArrayIndex: false,
@@ -16,36 +17,32 @@ func NewAsciiFormatter(left map[string]interface{}) *AsciiFormatter {
 }
 
 type AsciiFormatter struct {
-	left           map[string]interface{}
+	left           interface{}
 	ShowArrayIndex bool
 	buffer         string
-	path           []string
+	path           []diff.Position
 	size           []int
+	preShifts      []int
+	postShifts     []int
 	inArray        []bool
 }
 
-func (f *AsciiFormatter) Format(diff diff.Diff) (result string, err error) {
+func (f *AsciiFormatter) Format(d diff.Diff) (result string, err error) {
 	f.buffer = ""
-	f.path = []string{}
-	f.size = []int{}
-	f.inArray = []bool{}
+	f.path = []diff.Position{}
+	f.size = []int{1}
+	f.preShifts = []int{0}
+	f.postShifts = []int{0}
+	f.inArray = []bool{false}
 
-	f.printIndent(AsciiSame)
-	f.println("{")
-	f.push("ROOT", len(f.left), false)
-	f.processObject(f.left, diff.Deltas())
-	f.pop()
-	f.printIndent(AsciiSame)
-	f.println("}")
+	f.processItem(f.left, []diff.Delta{d.Delta()}, diff.Root)
 
 	return f.buffer, nil
 }
 
 func (f *AsciiFormatter) processArray(array []interface{}, deltas []diff.Delta) error {
-	patchedIndex := 0
 	for index, value := range array {
 		f.processItem(value, deltas, diff.Index(index))
-		patchedIndex++
 	}
 
 	// additional Added
@@ -57,7 +54,7 @@ func (f *AsciiFormatter) processArray(array []interface{}, deltas []diff.Delta) 
 			if int(d.Position.(diff.Index)) < len(array) {
 				continue
 			}
-			f.printRecursive(d.Position.String(), d.Value, AsciiAdded)
+			f.printRecursive(d.Position, d.Value, AsciiAdded)
 		}
 	}
 
@@ -76,7 +73,7 @@ func (f *AsciiFormatter) processObject(object map[string]interface{}, deltas []d
 		switch delta.(type) {
 		case *diff.Added:
 			d := delta.(*diff.Added)
-			f.printRecursive(d.Position.String(), d.Value, AsciiAdded)
+			f.printRecursive(d.Position, d.Value, AsciiAdded)
 		}
 	}
 
@@ -85,7 +82,11 @@ func (f *AsciiFormatter) processObject(object map[string]interface{}, deltas []d
 
 func (f *AsciiFormatter) processItem(value interface{}, deltas []diff.Delta, position diff.Position) error {
 	matchedDeltas := f.searchDeltas(deltas, position)
-	positionStr := position.String()
+	pp.Println(position)
+	pp.Println(*f.preShift())
+	pp.Println(*f.postShift())
+	pp.Println(value)
+	pp.Println(matchedDeltas)
 	if len(matchedDeltas) > 0 {
 		for _, matchedDelta := range matchedDeltas {
 
@@ -100,9 +101,9 @@ func (f *AsciiFormatter) processItem(value interface{}, deltas []diff.Delta, pos
 				}
 				o := value.(map[string]interface{})
 
-				f.printKeyWithIndent(positionStr, AsciiSame)
+				f.printKeyWithIndent(position, AsciiSame)
 				f.println("{")
-				f.push(positionStr, len(o), false)
+				f.push(position, len(o), false)
 				f.processObject(o, d.Deltas)
 				f.pop()
 				f.printIndent(AsciiSame)
@@ -119,9 +120,9 @@ func (f *AsciiFormatter) processItem(value interface{}, deltas []diff.Delta, pos
 				}
 				a := value.([]interface{})
 
-				f.printKeyWithIndent(positionStr, AsciiSame)
+				f.printKeyWithIndent(position, AsciiSame)
 				f.println("[")
-				f.push(positionStr, len(a), true)
+				f.push(position, len(a), true)
 				f.processArray(a, d.Deltas)
 				f.pop()
 				f.printIndent(AsciiSame)
@@ -130,26 +131,39 @@ func (f *AsciiFormatter) processItem(value interface{}, deltas []diff.Delta, pos
 
 			case *diff.Added:
 				d := matchedDelta.(*diff.Added)
-				f.printRecursive(positionStr, d.Value, AsciiAdded)
-				f.size[len(f.size)-1]++
+				f.printRecursive(position, d.Value, AsciiAdded)
+				*f.postShift()++
+				f.printRecursive(position, value, AsciiSame)
+
+			case *diff.Moved:
+				d := matchedDelta.(*diff.Moved)
+				if position == d.PrePosition() {
+					f.printRecursive(position, d.Value, AsciiDeleted)
+					*f.preShift()--
+				} else {
+					f.printRecursive(position, d.Value, AsciiAdded)
+					*f.postShift()++
+					f.printRecursive(position, value, AsciiSame)
+				}
 
 			case *diff.Modified:
 				d := matchedDelta.(*diff.Modified)
 				savedSize := f.size[len(f.size)-1]
-				f.printRecursive(positionStr, d.OldValue, AsciiDeleted)
+				f.printRecursive(position, d.OldValue, AsciiDeleted)
 				f.size[len(f.size)-1] = savedSize
-				f.printRecursive(positionStr, d.NewValue, AsciiAdded)
+				f.printRecursive(position, d.NewValue, AsciiAdded)
 
 			case *diff.TextDiff:
 				savedSize := f.size[len(f.size)-1]
 				d := matchedDelta.(*diff.TextDiff)
-				f.printRecursive(positionStr, d.OldValue, AsciiDeleted)
+				f.printRecursive(position, d.OldValue, AsciiDeleted)
 				f.size[len(f.size)-1] = savedSize
-				f.printRecursive(positionStr, d.NewValue, AsciiAdded)
+				f.printRecursive(position, d.NewValue, AsciiAdded)
 
 			case *diff.Deleted:
 				d := matchedDelta.(*diff.Deleted)
-				f.printRecursive(positionStr, d.Value, AsciiDeleted)
+				f.printRecursive(position, d.Value, AsciiDeleted)
+				*f.preShift()--
 
 			default:
 				return errors.New("Unknown Delta type detected")
@@ -157,26 +171,35 @@ func (f *AsciiFormatter) processItem(value interface{}, deltas []diff.Delta, pos
 
 		}
 	} else {
-		f.printRecursive(positionStr, value, AsciiSame)
+		f.printRecursive(position, value, AsciiSame)
 	}
 
 	return nil
 }
 
-func (f *AsciiFormatter) searchDeltas(deltas []diff.Delta, postion diff.Position) (results []diff.Delta) {
+func (f *AsciiFormatter) searchDeltas(deltas []diff.Delta, position diff.Position) (results []diff.Delta) {
 	results = make([]diff.Delta, 0)
+
 	for _, delta := range deltas {
 		switch delta.(type) {
-		case diff.PostDelta:
-			if delta.(diff.PostDelta).PostPosition() == postion {
-				results = append(results, delta)
-			}
 		case diff.PreDelta:
-			if delta.(diff.PreDelta).PrePosition() == postion {
+			if delta.(diff.PreDelta).PrePosition() == position {
 				results = append(results, delta)
 			}
-		default:
-			panic("heh")
+		}
+		switch delta.(type) {
+		case diff.PostDelta:
+			switch position.(type) {
+			case diff.Index:
+				if int(delta.(diff.PostDelta).PostPosition().(diff.Index)) ==
+					int(position.(diff.Index))+*f.preShift()+*f.postShift() {
+					results = append(results, delta)
+				}
+			default:
+				if delta.(diff.PostDelta).PostPosition() == position {
+					results = append(results, delta)
+				}
+			}
 		}
 	}
 	return
@@ -188,16 +211,28 @@ const (
 	AsciiDeleted = "-"
 )
 
-func (f *AsciiFormatter) push(name string, size int, array bool) {
-	f.path = append(f.path, name)
+func (f *AsciiFormatter) push(position diff.Position, size int, array bool) {
+	f.path = append(f.path, position)
 	f.size = append(f.size, size)
+	f.preShifts = append(f.preShifts, 0)
+	f.postShifts = append(f.postShifts, 0)
 	f.inArray = append(f.inArray, array)
 }
 
 func (f *AsciiFormatter) pop() {
 	f.path = f.path[0 : len(f.path)-1]
 	f.size = f.size[0 : len(f.size)-1]
+	f.preShifts = f.preShifts[0 : len(f.preShifts)-1]
+	f.postShifts = f.postShifts[0 : len(f.postShifts)-1]
 	f.inArray = f.inArray[0 : len(f.inArray)-1]
+}
+
+func (f *AsciiFormatter) preShift() *int {
+	return &f.preShifts[len(f.preShifts)-1]
+}
+
+func (f *AsciiFormatter) postShift() *int {
+	return &f.postShifts[len(f.postShifts)-1]
 }
 
 func (f *AsciiFormatter) printIndent(marker string) {
@@ -207,18 +242,20 @@ func (f *AsciiFormatter) printIndent(marker string) {
 	}
 }
 
-func (f *AsciiFormatter) printKeyWithIndent(name string, marker string) {
+func (f *AsciiFormatter) printKeyWithIndent(position diff.Position, marker string) {
 	f.printIndent(marker)
-	if !f.inArray[len(f.inArray)-1] {
-		f.printf(`"%s": `, name)
+	if position == diff.Root {
+		// nothing to do
+	} else if !f.inArray[len(f.inArray)-1] {
+		f.printf(`"%s": `, position.String())
 	} else if f.ShowArrayIndex {
-		f.printf(`%s: `, name)
+		f.printf(`%d: `, (int(position.(diff.Index)) + *f.preShift() + *f.postShift()))
 	}
 }
 
 func (f *AsciiFormatter) printComma() {
 	f.size[len(f.size)-1]--
-	if f.size[len(f.size)-1] > 0 {
+	if f.size[len(f.size)-1] + +*f.preShift() + *f.postShift() > 0 {
 		f.println(",")
 	} else {
 		f.println()
@@ -246,19 +283,19 @@ func (f *AsciiFormatter) println(a ...interface{}) {
 	f.buffer += fmt.Sprintln(a...)
 }
 
-func (f *AsciiFormatter) printRecursive(name string, value interface{}, marker string) {
+func (f *AsciiFormatter) printRecursive(position diff.Position, value interface{}, marker string) {
 	switch value.(type) {
 	case map[string]interface{}:
-		f.printKeyWithIndent(name, marker)
+		f.printKeyWithIndent(position, marker)
 		f.println("{")
 
 		m := value.(map[string]interface{})
 		size := len(m)
-		f.push(name, size, false)
+		f.push(position, size, false)
 
 		keys := sortedKeys(m)
 		for _, key := range keys {
-			f.printRecursive(key, m[key], marker)
+			f.printRecursive(diff.Name(key), m[key], marker)
 		}
 		f.pop()
 
@@ -266,14 +303,14 @@ func (f *AsciiFormatter) printRecursive(name string, value interface{}, marker s
 		f.print("}")
 		f.printComma()
 	case []interface{}:
-		f.printKeyWithIndent(name, marker)
+		f.printKeyWithIndent(position, marker)
 		f.println("[")
 
 		s := value.([]interface{})
 		size := len(s)
-		f.push("", size, true)
-		for _, item := range s {
-			f.printRecursive("", item, marker)
+		f.push(position, size, true)
+		for i, item := range s {
+			f.printRecursive(diff.Index(i), item, marker)
 		}
 		f.pop()
 
@@ -281,7 +318,7 @@ func (f *AsciiFormatter) printRecursive(name string, value interface{}, marker s
 		f.print("]")
 		f.printComma()
 	default:
-		f.printKeyWithIndent(name, marker)
+		f.printKeyWithIndent(position, marker)
 		f.printValue(value)
 		f.printComma()
 	}

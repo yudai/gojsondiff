@@ -29,7 +29,7 @@ var _ = Describe("Gojsondiff", func() {
 					b = LoadFixture("FIXTURES/base.json")
 
 					diff := differ.CompareObjects(a, b)
-					Expect(diff.Modified()).To(BeFalse())
+					Expect(diff.Delta()).To(BeNil())
 				})
 			})
 
@@ -39,7 +39,6 @@ var _ = Describe("Gojsondiff", func() {
 					b = LoadFixture("FIXTURES/base_changed.json")
 
 					diff := differ.CompareObjects(a, b)
-					Expect(diff.Modified()).To(BeTrue())
 					differ.ApplyPatch(a, diff)
 					Expect(a).To(Equal(LoadFixture("FIXTURES/base_changed.json")))
 				})
@@ -62,7 +61,6 @@ var _ = Describe("Gojsondiff", func() {
 					b := LoadFixture("FIXTURES/move_to.json")
 
 					diff := differ.CompareObjects(a, b)
-					Expect(diff.Modified()).To(BeTrue())
 					differ.ApplyPatch(a, diff)
 					Expect(a).To(Equal(LoadFixture("FIXTURES/move_to.json")))
 				})
@@ -74,7 +72,6 @@ var _ = Describe("Gojsondiff", func() {
 					b = LoadFixture("FIXTURES/long_text_to.json")
 
 					diff := differ.CompareObjects(a, b)
-					Expect(diff.Modified()).To(BeTrue())
 					differ.ApplyPatch(a, diff)
 					Expect(a).To(Equal(LoadFixture("FIXTURES/long_text_to.json")))
 				})
@@ -91,7 +88,6 @@ var _ = Describe("Gojsondiff", func() {
 					differ := New()
 
 					diffObj := differ.CompareObjects(aObj, bObj)
-					Expect(diffObj.Modified()).To(BeTrue())
 
 					aStr, err := ioutil.ReadFile(aFile)
 					Expect(err).To(BeNil())

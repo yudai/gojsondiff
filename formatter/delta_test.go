@@ -16,20 +16,6 @@ var _ = Describe("Delta", func() {
 			a, b map[string]interface{}
 		)
 
-		Context("There are no difference between the two JSON strings", func() {
-			It("Returns empty JSON", func() {
-				a = LoadFixture("../FIXTURES/base.json")
-				b = LoadFixture("../FIXTURES/base.json")
-
-				diff := diff.New().CompareObjects(a, b)
-
-				f := NewDeltaFormatter()
-				deltaJson, err := f.FormatAsJson(diff)
-				Expect(err).To(BeNil())
-				Expect(deltaJson).To(Equal(map[string]interface{}{}))
-			})
-		})
-
 		Context("There are some values modified", func() {
 			It("Detects changes", func() {
 				a = LoadFixture("../FIXTURES/base.json")

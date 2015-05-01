@@ -21,7 +21,6 @@ var _ = Describe("Ascii", func() {
 			b = LoadFixture("../FIXTURES/base_changed.json")
 
 			diff := diff.New().CompareObjects(a, b)
-			Expect(diff.Modified()).To(BeTrue())
 
 			f := NewAsciiFormatter(a)
 			deltaJson, err := f.Format(diff)
@@ -76,7 +75,6 @@ var _ = Describe("Ascii", func() {
 			b = LoadFixture("../FIXTURES/add_delete_to.json")
 
 			diff := diff.New().CompareObjects(a, b)
-			Expect(diff.Modified()).To(BeTrue())
 
 			f := NewAsciiFormatter(a)
 			deltaJson, err := f.Format(diff)

@@ -31,12 +31,12 @@ func (um *Unmarshaller) UnmarshalReader(diffReader io.Reader) (Diff, error) {
 	return um.UnmarshalBytes(diffBytes)
 }
 
-func (um *Unmarshaller) UnmarshalObject(diffObj map[string]interface{}) (Diff, error) {
+func (um *Unmarshaller) UnmarshalObject(diffObj interface{}) (Diff, error) {
 	result, err := process(Name(""), diffObj)
 	if err != nil {
 		return nil, err
 	}
-	return &diff{deltas: result.(*Object).Deltas}, nil
+	return &diff{delta: result}, nil
 }
 
 func process(position Position, object interface{}) (Delta, error) {

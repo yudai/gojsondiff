@@ -25,7 +25,7 @@ type DeltaFormatter struct {
 }
 
 func (f *DeltaFormatter) Format(diff diff.Diff) (result string, err error) {
-	jsonObject, err := f.formatObject(diff.Deltas())
+	jsonObject, err := f.formatItem(diff.Delta())
 	if err != nil {
 		return "", err
 	}
@@ -42,8 +42,36 @@ func (f *DeltaFormatter) Format(diff diff.Diff) (result string, err error) {
 	return string(resultBytes), nil
 }
 
-func (f *DeltaFormatter) FormatAsJson(diff diff.Diff) (json map[string]interface{}, err error) {
-	return f.formatObject(diff.Deltas())
+func (f *DeltaFormatter) FormatAsJson(diff diff.Diff) (json interface{}, err error) {
+	return f.formatItem(diff.Delta())
+}
+
+func (f *DeltaFormatter) formatItem(delta diff.Delta) (deltaJson interface{}, err error) {
+	switch delta.(type) {
+	case *diff.Object:
+		d := delta.(*diff.Object)
+		return f.formatObject(d.Deltas)
+	case *diff.Array:
+		d := delta.(*diff.Array)
+		return f.formatArray(d.Deltas)
+	case *diff.Added:
+		d := delta.(*diff.Added)
+		return []interface{}{d.Value}, nil
+	case *diff.Modified:
+		d := delta.(*diff.Modified)
+		return []interface{}{d.OldValue, d.NewValue}, nil
+	case *diff.TextDiff:
+		d := delta.(*diff.TextDiff)
+		return []interface{}{d.DiffString(), 0, DeltaTextDiff}, nil
+	case *diff.Deleted:
+		d := delta.(*diff.Deleted)
+		return []interface{}{d.Value, 0, DeltaDelete}, nil
+	case *diff.Moved:
+		d := delta.(*diff.Moved)
+		return []interface{}{"", d.PostPosition(), DeltaMove}, nil
+	default:
+		return nil, errors.New(fmt.Sprintf("Unknown Delta type detected: %#v", delta))
+	}
 }
 
 func (f *DeltaFormatter) formatObject(deltas []diff.Delta) (deltaJson map[string]interface{}, err error) {
