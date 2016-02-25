@@ -80,6 +80,38 @@ var _ = Describe("Gojsondiff", func() {
 				})
 			})
 		})
+		Describe("CompareArrays", func() {
+
+			var (
+				a, b   []interface{}
+				differ *Differ
+			)
+
+			BeforeEach(func() {
+				differ = New()
+			})
+
+			Context("There are no difference between the two JSON strings", func() {
+				It("Detects nothing", func() {
+					a = LoadFixtureAsArray("FIXTURES/array.json")
+					b = LoadFixtureAsArray("FIXTURES/array.json")
+
+					diff := differ.CompareSlices(a, b)
+					Expect(diff.Modified()).To(BeFalse())
+				})
+			})
+
+			Context("There are some values modified", func() {
+				It("Detects changes", func() {
+					a = LoadFixtureAsArray("FIXTURES/array.json")
+					b = LoadFixtureAsArray("FIXTURES/array_changed.json")
+
+					diff := differ.CompareSlices(a, b)
+					Expect(diff.Modified()).To(BeTrue())
+					Expect(len(diff.Deltas())).To(Equal(1))
+				})
+			})
+		})
 		Describe("Compare", func() {
 			Context("There are some values modified", func() {
 				It("Detects changes", func() {

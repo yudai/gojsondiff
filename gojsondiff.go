@@ -45,7 +45,8 @@ func New() *Differ {
 	}
 }
 
-// Compare compares two JSON strings as []bytes and return a Diff object.
+// Compare compares two JSON strings as []bytes and returns a Diff object.
+// Assuming left and right contain JSON objects
 func (differ *Differ) Compare(
 	left []byte,
 	right []byte,
@@ -63,8 +64,29 @@ func (differ *Differ) Compare(
 	return differ.CompareObjects(leftMap, rightMap), nil
 }
 
-// CompareObjects compares two JSON object as map[string]interface{}
-// and return a Diff object.
+// CompareArrays copares two JSON strings as []bytes and returns a Diff object.
+// Assuming left and right constain JSON arrays
+func (differ *Differ) CompareArrays(
+	left []byte,
+	right []byte,
+) (Diff, error) {
+	var leftArr, rightArr []interface{}
+	err := json.Unmarshal(left, &leftArr)
+	if err != nil {
+		return nil, err
+	}
+
+	err = json.Unmarshal(right, &rightArr)
+	if err != nil {
+		return nil, err
+	}
+
+	deltas := differ.compareArrays(leftArr, rightArr)
+	return &diff{deltas: deltas}, nil
+}
+
+// CompareObjects compares two JSON objects as map[string]interface{}
+// and returns a Diff object.
 func (differ *Differ) CompareObjects(
 	left map[string]interface{},
 	right map[string]interface{},
@@ -99,6 +121,16 @@ func (differ *Differ) compareMaps(
 	}
 
 	return deltas
+}
+
+// CompareSlices compares two JSON arrays as []interface{}
+// and returns a Diff object.
+func (differ *Differ) CompareSlices(
+	left []interface{},
+	right []interface{},
+) Diff {
+	deltas := differ.compareArrays(left, right)
+	return &diff{deltas: deltas}
 }
 
 // ApplyPatch applies a Diff to an JSON object. This method is destructive.
