@@ -73,6 +73,16 @@ func (differ *Differ) CompareObjects(
 	return &diff{deltas: deltas}
 }
 
+// CompareArrays compares two JSON arrays as []interface{}
+// and return a Diff object.
+func (differ *Differ) CompareArrays(
+	left []interface{},
+	right []interface{},
+) Diff {
+	deltas := differ.compareArrays(left, right)
+	return &diff{deltas: deltas}
+}
+
 func (differ *Differ) compareMaps(
 	left map[string]interface{},
 	right map[string]interface{},
