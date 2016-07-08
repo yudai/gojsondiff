@@ -361,8 +361,8 @@ func (differ *Differ) maximizeSimilarities(left []maybe, right []maybe) (resultD
 	for ; x < sizeX-1; x++ {
 		freeLeft = append(freeLeft, left[x-1])
 	}
-	for ; x < sizeY-1; y++ {
-		freeLeft = append(freeRight, left[y-1])
+	for ; y < sizeY-1; y++ {
+		freeRight = append(freeRight, right[y-1])
 	}
 
 	return resultDeltas, freeLeft, freeRight
