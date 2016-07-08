@@ -8,7 +8,7 @@ import (
 
 	"github.com/codegangsta/cli"
 
-	diff "github.com/yudai/gojsondiff"
+	diff "github.com/yanyan300300/gojsondiff"
 )
 
 func main() {
