@@ -8,7 +8,7 @@ import (
 	diff "github.com/yudai/gojsondiff"
 )
 
-func NewAsciiFormatter(left map[string]interface{}) *AsciiFormatter {
+func NewAsciiFormatter(left interface{}) *AsciiFormatter {
 	return &AsciiFormatter{
 		left:           left,
 		ShowArrayIndex: false,
@@ -16,7 +16,7 @@ func NewAsciiFormatter(left map[string]interface{}) *AsciiFormatter {
 }
 
 type AsciiFormatter struct {
-	left           map[string]interface{}
+	left           interface{}
 	ShowArrayIndex bool
 	buffer         string
 	path           []string
@@ -30,15 +30,36 @@ func (f *AsciiFormatter) Format(diff diff.Diff) (result string, err error) {
 	f.size = []int{}
 	f.inArray = []bool{}
 
+	if v, ok := f.left.(map[string]interface{}); ok {
+		f.formatObject(v, diff)
+	} else if v, ok := f.left.([]interface{}); ok {
+		f.formatArray(v, diff)
+	} else {
+		return "", fmt.Errorf("expected map[string]interface{} or []interface{}, got %T",
+			f.left)
+	}
+
+	return f.buffer, nil
+}
+
+func (f *AsciiFormatter) formatObject(left map[string]interface{}, df diff.Diff) {
 	f.printIndent(AsciiSame)
 	f.println("{")
-	f.push("ROOT", len(f.left), false)
-	f.processObject(f.left, diff.Deltas())
+	f.push("ROOT", len(left), false)
+	f.processObject(left, df.Deltas())
 	f.pop()
 	f.printIndent(AsciiSame)
 	f.println("}")
+}
 
-	return f.buffer, nil
+func (f *AsciiFormatter) formatArray(left []interface{}, df diff.Diff) {
+	f.printIndent(AsciiSame)
+	f.println("[")
+	f.push("ROOT", len(left), true)
+	f.processArray(left, df.Deltas())
+	f.pop()
+	f.printIndent(AsciiSame)
+	f.println("]")
 }
 
 func (f *AsciiFormatter) processArray(array []interface{}, deltas []diff.Delta) error {

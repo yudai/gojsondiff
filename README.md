@@ -8,7 +8,7 @@
 
 ## How to use
 
-### Instllation
+### Installation
 
 ```sh
 go get github.com/yudai/gojsondiff
