@@ -43,6 +43,7 @@ var _ = Describe("Ascii", func() {
      ]
    ],
    "bool": true,
+-  "null": null,
    "num_float": 39.39,
    "num_int": 13,
    "obj": {

@@ -9,5 +9,6 @@
         "num": 19,
         "arr": [17, "str", {"str": "eafeb"}],
         "obj": {"str": "efj3", "num": 14}
-    }
+    },
+    "null": null
 }
