@@ -5,7 +5,7 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	. "github.com/yudai/gojsondiff/test"
+	. "github.com/yudai/gojsondiff/tests"
 
 	diff "github.com/yudai/gojsondiff"
 )
