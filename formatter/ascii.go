@@ -229,6 +229,8 @@ func (f *AsciiFormatter) printValue(value interface{}) {
 	switch value.(type) {
 	case string:
 		f.buffer += fmt.Sprintf(`"%s"`, value)
+	case nil:
+		f.buffer += "null"
 	default:
 		f.buffer += fmt.Sprintf(`%#v`, value)
 	}

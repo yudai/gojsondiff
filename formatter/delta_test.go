@@ -56,6 +56,7 @@ var _ = Describe("Delta", func() {
 								},
 							},
 						},
+						"null": []interface{}{nil, 0, 0},
 						"obj": map[string]interface{}{
 							"arr": map[string]interface{}{
 								"_t": "a",
