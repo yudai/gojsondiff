@@ -23,7 +23,7 @@ var _ = Describe("Ascii", func() {
 			diff := diff.New().CompareObjects(a, b)
 			Expect(diff.Modified()).To(BeTrue())
 
-			f := NewAsciiFormatter(a)
+			f := NewAsciiFormatter(a, AsciiFormatterDefaultConfig)
 			deltaJson, err := f.Format(diff)
 			Expect(err).To(BeNil())
 			Expect(deltaJson).To(Equal(
@@ -79,7 +79,7 @@ var _ = Describe("Ascii", func() {
 			diff := diff.New().CompareObjects(a, b)
 			Expect(diff.Modified()).To(BeTrue())
 
-			f := NewAsciiFormatter(a)
+			f := NewAsciiFormatter(a, AsciiFormatterDefaultConfig)
 			deltaJson, err := f.Format(diff)
 			Expect(err).To(BeNil())
 			Expect(deltaJson).To(Equal(

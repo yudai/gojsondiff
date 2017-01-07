@@ -39,7 +39,7 @@ func (f *DeltaFormatter) Format(diff diff.Diff) (result string, err error) {
 		return "", err
 	}
 
-	return string(resultBytes), nil
+	return string(resultBytes) + "\n", nil
 }
 
 func (f *DeltaFormatter) FormatAsJson(diff diff.Diff) (json map[string]interface{}, err error) {

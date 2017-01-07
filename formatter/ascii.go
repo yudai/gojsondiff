@@ -1,6 +1,7 @@
 package formatter
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"sort"
@@ -8,24 +9,38 @@ import (
 	diff "github.com/yudai/gojsondiff"
 )
 
-func NewAsciiFormatter(left interface{}) *AsciiFormatter {
+func NewAsciiFormatter(left interface{}, config AsciiFormatterConfig) *AsciiFormatter {
 	return &AsciiFormatter{
-		left:           left,
-		ShowArrayIndex: false,
+		left:   left,
+		config: config,
 	}
 }
 
 type AsciiFormatter struct {
-	left           interface{}
+	left    interface{}
+	config  AsciiFormatterConfig
+	buffer  *bytes.Buffer
+	path    []string
+	size    []int
+	inArray []bool
+	line    *AsciiLine
+}
+
+type AsciiFormatterConfig struct {
 	ShowArrayIndex bool
-	buffer         string
-	path           []string
-	size           []int
-	inArray        []bool
+	Coloring       bool
+}
+
+var AsciiFormatterDefaultConfig = AsciiFormatterConfig{}
+
+type AsciiLine struct {
+	marker string
+	indent int
+	buffer *bytes.Buffer
 }
 
 func (f *AsciiFormatter) Format(diff diff.Diff) (result string, err error) {
-	f.buffer = ""
+	f.buffer = bytes.NewBuffer([]byte{})
 	f.path = []string{}
 	f.size = []int{}
 	f.inArray = []bool{}
@@ -39,27 +54,23 @@ func (f *AsciiFormatter) Format(diff diff.Diff) (result string, err error) {
 			f.left)
 	}
 
-	return f.buffer, nil
+	return f.buffer.String(), nil
 }
 
 func (f *AsciiFormatter) formatObject(left map[string]interface{}, df diff.Diff) {
-	f.printIndent(AsciiSame)
-	f.println("{")
+	f.addLineWith(AsciiSame, "{")
 	f.push("ROOT", len(left), false)
 	f.processObject(left, df.Deltas())
 	f.pop()
-	f.printIndent(AsciiSame)
-	f.println("}")
+	f.addLineWith(AsciiSame, "}")
 }
 
 func (f *AsciiFormatter) formatArray(left []interface{}, df diff.Diff) {
-	f.printIndent(AsciiSame)
-	f.println("[")
+	f.addLineWith(AsciiSame, "[")
 	f.push("ROOT", len(left), true)
 	f.processArray(left, df.Deltas())
 	f.pop()
-	f.printIndent(AsciiSame)
-	f.println("]")
+	f.addLineWith(AsciiSame, "]")
 }
 
 func (f *AsciiFormatter) processArray(array []interface{}, deltas []diff.Delta) error {
@@ -121,14 +132,17 @@ func (f *AsciiFormatter) processItem(value interface{}, deltas []diff.Delta, pos
 				}
 				o := value.(map[string]interface{})
 
-				f.printKeyWithIndent(positionStr, AsciiSame)
-				f.println("{")
+				f.newLine(AsciiSame)
+				f.printKey(positionStr)
+				f.print("{")
+				f.closeLine()
 				f.push(positionStr, len(o), false)
 				f.processObject(o, d.Deltas)
 				f.pop()
-				f.printIndent(AsciiSame)
+				f.newLine(AsciiSame)
 				f.print("}")
 				f.printComma()
+				f.closeLine()
 
 			case *diff.Array:
 				d := matchedDelta.(*diff.Array)
@@ -140,14 +154,17 @@ func (f *AsciiFormatter) processItem(value interface{}, deltas []diff.Delta, pos
 				}
 				a := value.([]interface{})
 
-				f.printKeyWithIndent(positionStr, AsciiSame)
-				f.println("[")
+				f.newLine(AsciiSame)
+				f.printKey(positionStr)
+				f.print("[")
+				f.closeLine()
 				f.push(positionStr, len(a), true)
 				f.processArray(a, d.Deltas)
 				f.pop()
-				f.printIndent(AsciiSame)
+				f.newLine(AsciiSame)
 				f.print("]")
 				f.printComma()
+				f.closeLine()
 
 			case *diff.Added:
 				d := matchedDelta.(*diff.Added)
@@ -209,6 +226,11 @@ const (
 	AsciiDeleted = "-"
 )
 
+var AsciiStyles = map[string]string{
+	AsciiAdded:   "30;42",
+	AsciiDeleted: "30;41",
+}
+
 func (f *AsciiFormatter) push(name string, size int, array bool) {
 	f.path = append(f.path, name)
 	f.size = append(f.size, size)
@@ -221,59 +243,79 @@ func (f *AsciiFormatter) pop() {
 	f.inArray = f.inArray[0 : len(f.inArray)-1]
 }
 
-func (f *AsciiFormatter) printIndent(marker string) {
-	f.print(marker)
-	for n := 0; n < len(f.path); n++ {
-		f.print("  ")
+func (f *AsciiFormatter) addLineWith(marker string, value string) {
+	f.line = &AsciiLine{
+		marker: marker,
+		indent: len(f.path),
+		buffer: bytes.NewBufferString(value),
+	}
+	f.closeLine()
+}
+
+func (f *AsciiFormatter) newLine(marker string) {
+	f.line = &AsciiLine{
+		marker: marker,
+		indent: len(f.path),
+		buffer: bytes.NewBuffer([]byte{}),
 	}
 }
 
-func (f *AsciiFormatter) printKeyWithIndent(name string, marker string) {
-	f.printIndent(marker)
+func (f *AsciiFormatter) closeLine() {
+	style, ok := AsciiStyles[f.line.marker]
+	if f.config.Coloring && ok {
+		f.buffer.WriteString("\x1b[" + style + "m")
+	}
+
+	f.buffer.WriteString(f.line.marker)
+	for n := 0; n < f.line.indent; n++ {
+		f.buffer.WriteString("  ")
+	}
+	f.buffer.Write(f.line.buffer.Bytes())
+
+	if f.config.Coloring && ok {
+		f.buffer.WriteString("\x1b[0m")
+	}
+
+	f.buffer.WriteRune('\n')
+}
+
+func (f *AsciiFormatter) printKey(name string) {
 	if !f.inArray[len(f.inArray)-1] {
-		f.printf(`"%s": `, name)
-	} else if f.ShowArrayIndex {
-		f.printf(`%s: `, name)
+		fmt.Fprintf(f.line.buffer, `"%s": `, name)
+	} else if f.config.ShowArrayIndex {
+		fmt.Fprintf(f.line.buffer, `%s: `, name)
 	}
 }
 
 func (f *AsciiFormatter) printComma() {
 	f.size[len(f.size)-1]--
 	if f.size[len(f.size)-1] > 0 {
-		f.println(",")
-	} else {
-		f.println()
+		f.line.buffer.WriteRune(',')
 	}
 }
 
 func (f *AsciiFormatter) printValue(value interface{}) {
 	switch value.(type) {
 	case string:
-		f.buffer += fmt.Sprintf(`"%s"`, value)
+		fmt.Fprintf(f.line.buffer, `"%s"`, value)
 	case nil:
-		f.buffer += "null"
+		f.line.buffer.WriteString("null")
 	default:
-		f.buffer += fmt.Sprintf(`%#v`, value)
+		fmt.Fprintf(f.line.buffer, `%#v`, value)
 	}
 }
 
-func (f *AsciiFormatter) print(a ...interface{}) {
-	f.buffer += fmt.Sprint(a...)
-}
-
-func (f *AsciiFormatter) printf(format string, a ...interface{}) {
-	f.buffer += fmt.Sprintf(format, a...)
-}
-
-func (f *AsciiFormatter) println(a ...interface{}) {
-	f.buffer += fmt.Sprintln(a...)
+func (f *AsciiFormatter) print(a string) {
+	f.line.buffer.WriteString(a)
 }
 
 func (f *AsciiFormatter) printRecursive(name string, value interface{}, marker string) {
 	switch value.(type) {
 	case map[string]interface{}:
-		f.printKeyWithIndent(name, marker)
-		f.println("{")
+		f.newLine(marker)
+		f.printKey(name)
+		f.print("{")
+		f.closeLine()
 
 		m := value.(map[string]interface{})
 		size := len(m)
@@ -285,12 +327,16 @@ func (f *AsciiFormatter) printRecursive(name string, value interface{}, marker s
 		}
 		f.pop()
 
-		f.printIndent(marker)
+		f.newLine(marker)
 		f.print("}")
 		f.printComma()
+		f.closeLine()
+
 	case []interface{}:
-		f.printKeyWithIndent(name, marker)
-		f.println("[")
+		f.newLine(marker)
+		f.printKey(name)
+		f.print("[")
+		f.closeLine()
 
 		s := value.([]interface{})
 		size := len(s)
@@ -300,13 +346,17 @@ func (f *AsciiFormatter) printRecursive(name string, value interface{}, marker s
 		}
 		f.pop()
 
-		f.printIndent(marker)
+		f.newLine(marker)
 		f.print("]")
 		f.printComma()
+		f.closeLine()
+
 	default:
-		f.printKeyWithIndent(name, marker)
+		f.newLine(marker)
+		f.printKey(name)
 		f.printValue(value)
 		f.printComma()
+		f.closeLine()
 	}
 }
 

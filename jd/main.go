@@ -25,6 +25,11 @@ func main() {
 			Usage:  "Diff Outpu Format (ascii, delta)",
 			EnvVar: "DIFF_FORMAT",
 		},
+		cli.BoolFlag{
+			Name:   "coloring, c",
+			Usage:  "Enable coloring in the ASCII mode (not available in the delta mode)",
+			EnvVar: "COLORING",
+		},
 	}
 
 	app.Action = func(c *cli.Context) {
@@ -65,13 +70,17 @@ func main() {
 		if format == "ascii" {
 			var aJson map[string]interface{}
 			json.Unmarshal(aString, &aJson)
-			formatter := formatter.NewAsciiFormatter(aJson)
-			formatter.ShowArrayIndex = true
+
+			config := formatter.AsciiFormatterConfig{
+				ShowArrayIndex: true,
+				Coloring:       c.Bool("coloring"),
+			}
+
+			formatter := formatter.NewAsciiFormatter(aJson, config)
 			diffString, err = formatter.Format(d)
 			if err != nil {
 				// No error can occur
 			}
-			fmt.Print(diffString)
 		} else if format == "delta" {
 			formatter := formatter.NewDeltaFormatter()
 			diffString, err = formatter.Format(d)
@@ -83,7 +92,7 @@ func main() {
 			os.Exit(4)
 		}
 
-		fmt.Println(diffString)
+		fmt.Print(diffString)
 	}
 
 	app.Run(os.Args)
