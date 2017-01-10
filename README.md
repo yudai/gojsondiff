@@ -1,10 +1,12 @@
 # Go JSON Diff (and Patch)
 
 [![Wercker](https://app.wercker.com/status/00d70daaf40ce277fd4f10290f097b9d/s/master)][wercker]
+[![GoDoc](https://godoc.org/github.com/yudai/gojsondiff?status.svg)][godoc]
 [![MIT License](http://img.shields.io/badge/license-MIT-blue.svg)][license]
 
 [wercker]: https://app.wercker.com/project/bykey/00d70daaf40ce277fd4f10290f097b9d
-[license]: https://github.com/yudai/gojsondiff/blob/master/LICENS
+[godoc]: https://godoc.org/github.com/yudai/gojsondiff
+[license]: https://github.com/yudai/gojsondiff/blob/master/LICENSE
 
 ## How to use
 
