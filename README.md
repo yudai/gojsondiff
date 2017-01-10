@@ -23,7 +23,7 @@ See `jd/main.go` for how to use this library.
 
 This repository contains a package that you can use as a CLI tool.
 
-### Instllation
+### Installation
 
 ```sh
 go get github.com/yudai/gojsondiff/jd
