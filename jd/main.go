@@ -30,9 +30,14 @@ func main() {
 			Usage:  "Enable coloring in the ASCII mode (not available in the delta mode)",
 			EnvVar: "COLORING",
 		},
+		cli.BoolFlag{
+			Name:   "quiet, q",
+			Usage:  "Suppress output, if no differences are found",
+			EnvVar: "QUIET",
+		},
 	}
 
-	app.Action = func(c *cli.Context) {
+	app.Action = func(c *cli.Context) error {
 		if len(c.Args()) < 2 {
 			fmt.Println("Not enough arguments.\n")
 			fmt.Printf("Usage: %s json_file another_json_file\n", app.Name)
@@ -65,34 +70,38 @@ func main() {
 		}
 
 		// Output the result
-		format := c.String("format")
-		var diffString string
-		if format == "ascii" {
-			var aJson map[string]interface{}
-			json.Unmarshal(aString, &aJson)
+		if d.Modified() || !c.Bool("quiet") {
+			format := c.String("format")
+			var diffString string
+			if format == "ascii" {
+				var aJson map[string]interface{}
+				json.Unmarshal(aString, &aJson)
 
-			config := formatter.AsciiFormatterConfig{
-				ShowArrayIndex: true,
-				Coloring:       c.Bool("coloring"),
+				config := formatter.AsciiFormatterConfig{
+					ShowArrayIndex: true,
+					Coloring:       c.Bool("coloring"),
+				}
+
+				formatter := formatter.NewAsciiFormatter(aJson, config)
+				diffString, err = formatter.Format(d)
+				if err != nil {
+					// No error can occur
+				}
+			} else if format == "delta" {
+				formatter := formatter.NewDeltaFormatter()
+				diffString, err = formatter.Format(d)
+				if err != nil {
+					// No error can occur
+				}
+			} else {
+				fmt.Printf("Unknown Foramt %s\n", format)
+				os.Exit(4)
 			}
 
-			formatter := formatter.NewAsciiFormatter(aJson, config)
-			diffString, err = formatter.Format(d)
-			if err != nil {
-				// No error can occur
-			}
-		} else if format == "delta" {
-			formatter := formatter.NewDeltaFormatter()
-			diffString, err = formatter.Format(d)
-			if err != nil {
-				// No error can occur
-			}
-		} else {
-			fmt.Printf("Unknown Foramt %s\n", format)
-			os.Exit(4)
+			fmt.Print(diffString)
+			return cli.NewExitError("", 1)
 		}
-
-		fmt.Print(diffString)
+		return nil
 	}
 
 	app.Run(os.Args)
