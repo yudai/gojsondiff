@@ -46,8 +46,8 @@
 			"importpath": "github.com/urfave/cli",
 			"repository": "https://github.com/urfave/cli",
 			"vcs": "git",
-			"revision": "565493f259bf868adb54d45d5f4c68d405117adf",
-			"branch": "HEAD",
+			"revision": "2526b57c56f30b50466c96c4133b1a4ad0f0191f",
+			"branch": "master",
 			"notests": true
 		},
 		{
