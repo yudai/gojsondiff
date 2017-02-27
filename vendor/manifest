@@ -37,8 +37,8 @@
 			"importpath": "github.com/sergi/go-diff/diffmatchpatch",
 			"repository": "https://github.com/sergi/go-diff",
 			"vcs": "git",
-			"revision": "97b2266dfe4bd4ea1b81a463322f04f8b724801e",
-			"branch": "HEAD",
+			"revision": "24e2351369ec4949b2ed0dc5c477afdd4c4034e8",
+			"branch": "master",
 			"path": "/diffmatchpatch",
 			"notests": true
 		},
