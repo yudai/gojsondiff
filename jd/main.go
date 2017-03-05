@@ -63,7 +63,7 @@ func main() {
 
 		// Then, compare them
 		differ := diff.New()
-		d, err := differ.Compare(aString, bString)
+		d, err := differ.CompareBytes(aString, bString)
 		if err != nil {
 			fmt.Printf("Failed to unmarshal file: %s\n", err.Error())
 			os.Exit(3)
@@ -74,8 +74,11 @@ func main() {
 			format := c.String("format")
 			var diffString string
 			if format == "ascii" {
-				var aJson map[string]interface{}
-				json.Unmarshal(aString, &aJson)
+				var aJson interface{}
+				err := json.Unmarshal(aString, &aJson)
+				if err != nil {
+					panic("unexpeced JSON marshaling error")
+				}
 
 				config := formatter.AsciiFormatterConfig{
 					ShowArrayIndex: true,
@@ -86,12 +89,13 @@ func main() {
 				diffString, err = formatter.Format(d)
 				if err != nil {
 					// No error can occur
+					panic("unexpected Formatting error")
 				}
 			} else if format == "delta" {
 				formatter := formatter.NewDeltaFormatter()
 				diffString, err = formatter.Format(d)
 				if err != nil {
-					// No error can occur
+					panic("unexpected Formatting error")
 				}
 			} else {
 				fmt.Printf("Unknown Foramt %s\n", format)

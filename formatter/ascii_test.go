@@ -1,33 +1,23 @@
-package formatter_test
+package formatter
 
 import (
-	. "github.com/yudai/gojsondiff/formatter"
-
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
-	. "github.com/yudai/gojsondiff/tests"
+	"testing"
 
 	diff "github.com/yudai/gojsondiff"
+	"github.com/yudai/gojsondiff/tests"
 )
 
-var _ = Describe("Ascii", func() {
-	Describe("AsciiPrinter", func() {
-		var (
-			a, b map[string]interface{}
-		)
+func TestAsciiFormatter(t *testing.T) {
+	differ := diff.New()
 
-		It("Prints the given diff", func() {
-			a = LoadFixture("../FIXTURES/base.json")
-			b = LoadFixture("../FIXTURES/base_changed.json")
-
-			diff := diff.New().CompareObjects(a, b)
-			Expect(diff.Modified()).To(BeTrue())
-
-			f := NewAsciiFormatter(a, AsciiFormatterDefaultConfig)
-			deltaJson, err := f.Format(diff)
-			Expect(err).To(BeNil())
-			Expect(deltaJson).To(Equal(
-				` {
+	cases := []struct {
+		left   string
+		right  string
+		output string
+	}{
+		{
+			"../FIXTURES/base.json", "../FIXTURES/base_changed.json",
+			` {
    "arr": [
      "arr0",
      21,
@@ -55,6 +45,7 @@ var _ = Describe("Ascii", func() {
 +        "str": "changed"
        }
      ],
++    "new": "added",
 -    "num": 19,
      "obj": {
 -      "num": 14,
@@ -63,27 +54,28 @@ var _ = Describe("Ascii", func() {
 +      "str": "changed"
      },
      "str": "bcded"
-+    "new": "added"
    },
    "str": "abcde"
  }
 `,
-			),
-			)
-		})
-
-		It("Prints the given diff", func() {
-			a = LoadFixture("../FIXTURES/add_delete_from.json")
-			b = LoadFixture("../FIXTURES/add_delete_to.json")
-
-			diff := diff.New().CompareObjects(a, b)
-			Expect(diff.Modified()).To(BeTrue())
-
-			f := NewAsciiFormatter(a, AsciiFormatterDefaultConfig)
-			deltaJson, err := f.Format(diff)
-			Expect(err).To(BeNil())
-			Expect(deltaJson).To(Equal(
-				` {
+		},
+		{
+			"../FIXTURES/add_delete_from.json", "../FIXTURES/add_delete_to.json",
+			` {
++  "add": {
++    "l0a": [
++      "abcd",
++      [
++        "efcg"
++      ]
++    ],
++    "l0o": {
++      "l1o": {
++        "l2s": "efed"
++      },
++      "l1s": "abcd"
++    }
++  },
 -  "delete": {
 -    "l0a": [
 -      "abcd",
@@ -98,25 +90,23 @@ var _ = Describe("Ascii", func() {
 -      "l1s": "abcd"
 -    }
 -  }
-+  "add": {
-+    "l0a": [
-+      "abcd",
-+      [
-+        "efcg"
-+      ]
-+    ],
-+    "l0o": {
-+      "l1o": {
-+        "l2s": "efed"
-+      },
-+      "l1s": "abcd"
-+    }
-+  }
  }
 `,
-			),
-			)
-		})
-	})
+		},
+	}
 
-})
+	for i, c := range cases {
+		left := tests.LoadFixture(t, c.left)
+		right := tests.LoadFixture(t, c.right)
+		diff := differ.Compare(left, right)
+
+		f := NewAsciiFormatter(left, AsciiFormatterDefaultConfig)
+		output, err := f.Format(diff)
+		if err != nil {
+			t.Errorf("unexpected format error at test case `%d`: left `%s`, right `%s` ", i, c.left, c.right)
+		}
+		if output != c.output {
+			t.Errorf("unexpected output at test case `%d` (left `%s`, right `%s`): output: %s, expected: %s ", i, c.left, c.right, output, c.output)
+		}
+	}
+}
