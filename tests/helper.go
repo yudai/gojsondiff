@@ -1,34 +1,20 @@
 package tests
 
 import (
-	. "github.com/onsi/ginkgo"
-
 	"encoding/json"
 	"io/ioutil"
+	"testing"
 )
 
-func LoadFixture(file string) map[string]interface{} {
+func LoadFixture(t *testing.T, file string) interface{} {
 	content, err := ioutil.ReadFile(file)
 	if err != nil {
-		Fail("Fixture file '" + file + "' not found.")
+		t.Errorf("Fixture file `%s` not found.", file)
 	}
-	var result map[string]interface{}
+	var result interface{}
 	err = json.Unmarshal(content, &result)
 	if err != nil {
-		Fail("Unmarshaling JSON of '" + file + "' failed: " + err.Error())
-	}
-	return result
-}
-
-func LoadFixtureAsArray(file string) []interface{} {
-	content, err := ioutil.ReadFile(file)
-	if err != nil {
-		Fail("Fixture file '" + file + "' not found.")
-	}
-	var result []interface{}
-	err = json.Unmarshal(content, &result)
-	if err != nil {
-		Fail("Unmarshaling JSON of '" + file + "' failed: " + err.Error())
+		t.Errorf("Unmarshaling JSON of `%s` failed: %s", file, err)
 	}
 	return result
 }

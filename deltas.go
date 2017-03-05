@@ -2,16 +2,17 @@ package gojsondiff
 
 import (
 	"errors"
-	dmp "github.com/sergi/go-diff/diffmatchpatch"
 	"reflect"
-	"strconv"
+
+	dmp "github.com/sergi/go-diff/diffmatchpatch"
+	"github.com/yudai/golcs"
 )
 
-// A Delta represents an atomic difference between two JSON objects.
+// A Delta represents an atomic difference between two JSON values.
 type Delta interface {
-	// Similarity calculates the similarity of the Delta values.
-	// The return value is normalized from 0 to 1,
-	// 0 is completely different and 1 is they are same
+	// Similarity calculates the similarity of the two values.
+	// The returned value is normalized from 0 to 1,
+	// 0 means that the values are completely different and 1 means the oppsite.
 	Similarity() (similarity float64)
 }
 
@@ -38,216 +39,104 @@ func (cache similarityCache) Similarity() (similarity float64) {
 	return cache.value
 }
 
-// A Position represents the position of a Delta in an object or an array.
-type Position interface {
-	// String returns the position as a string
-	String() (name string)
-
-	// CompareTo returns a true if the Position is smaller than another Position.
-	// This function is used to sort Positions by the sort package.
-	CompareTo(another Position) bool
-}
-
-// A Name is a Postition with a string, which means the delta is in an object.
-type Name string
-
-func (n Name) String() (name string) {
-	return string(n)
-}
-
-func (n Name) CompareTo(another Position) bool {
-	return n < another.(Name)
-}
-
-// A Index is a Position with an int value, which means the Delta is in an Array.
-type Index int
-
-func (i Index) String() (name string) {
-	return strconv.Itoa(int(i))
-}
-
-func (i Index) CompareTo(another Position) bool {
-	return i < another.(Index)
-}
-
-// A PreDelta is a Delta that has a position of the left side JSON object.
-// Deltas implements this interface should be applies before PostDeltas.
-type PreDelta interface {
-	// PrePosition returns the Position.
-	PrePosition() Position
-
-	// PreApply applies the delta to object.
-	PreApply(object interface{}) interface{}
-}
-
-type preDelta struct{ Position }
-
-func (i preDelta) PrePosition() Position {
-	return Position(i.Position)
-}
-
-type preDeltas []PreDelta
-
-// for sorting
-func (s preDeltas) Len() int {
-	return len(s)
-}
-
-// for sorting
-func (s preDeltas) Swap(i, j int) {
-	s[i], s[j] = s[j], s[i]
-}
-
-// for sorting
-func (s preDeltas) Less(i, j int) bool {
-	return !s[i].PrePosition().CompareTo(s[j].PrePosition())
-}
-
-// A PreDelta is a Delta that has a position of the right side JSON object.
-// Deltas implements this interface should be applies after PreDeltas.
-type PostDelta interface {
-	// PostPosition returns the Position.
-	PostPosition() Position
-
-	// PostApply applies the delta to object.
-	PostApply(object interface{}) interface{}
-}
-
-type postDelta struct{ Position }
-
-func (i postDelta) PostPosition() Position {
-	return Position(i.Position)
-}
-
-type postDeltas []PostDelta
-
-// for sorting
-func (s postDeltas) Len() int {
-	return len(s)
-}
-
-// for sorting
-func (s postDeltas) Swap(i, j int) {
-	s[i], s[j] = s[j], s[i]
-}
-
-// for sorting
-func (s postDeltas) Less(i, j int) bool {
-	return s[i].PostPosition().CompareTo(s[j].PostPosition())
-}
-
-// An Object is a Delta that represents an object of JSON
+// An Object is a Delta that represents changes in a JSON object
 type Object struct {
-	postDelta
 	similarityCache
 
-	// Deltas holds internal Deltas
-	Deltas []Delta
+	// Deltas holds internal changes with property names
+	Deltas map[string]Delta
 }
 
 // NewObject returns an Object
-func NewObject(position Position, deltas []Delta) *Object {
-	d := Object{postDelta: postDelta{position}, Deltas: deltas}
+func NewObject(deltas map[string]Delta) *Object {
+	d := Object{Deltas: deltas}
 	d.similarityCache = newSimilarityCache(&d)
 	return &d
-}
-
-func (d *Object) PostApply(object interface{}) interface{} {
-	switch object.(type) {
-	case map[string]interface{}:
-		o := object.(map[string]interface{})
-		n := string(d.PostPosition().(Name))
-		o[n] = applyDeltas(d.Deltas, o[n])
-	case []interface{}:
-		o := object.([]interface{})
-		n := int(d.PostPosition().(Index))
-		o[n] = applyDeltas(d.Deltas, o[n])
-	}
-	return object
 }
 
 func (d *Object) similarity() (similarity float64) {
-	similarity = deltasSimilarity(d.Deltas)
-	return
+	for _, delta := range d.Deltas {
+		similarity += delta.Similarity()
+	}
+	return similarity / float64(len(d.Deltas))
 }
 
-// An Array is a Delta that represents an array of JSON
+// An Array is a Delta that represents changes in a JSON array
 type Array struct {
-	postDelta
 	similarityCache
 
-	// Deltas holds internal Deltas
-	Deltas []Delta
+	// PreDeltas hold internal changes with index values which
+	// indicate the positions in the original JSON data.
+	// The map may have Delted and Moved Deltas.
+	PreDeltas map[int]Delta
+
+	// PostDeltas hold internal changes with index values which
+	// indicate the positions in the changed JSON data.
+	// The map may have Added and Modified Deltas.
+	PostDeltas map[int]Delta
 }
 
 // NewArray returns an Array
-func NewArray(position Position, deltas []Delta) *Array {
-	d := Array{postDelta: postDelta{position}, Deltas: deltas}
+func NewArray(preDeltas map[int]Delta, postDeltas map[int]Delta) *Array {
+	d := Array{PreDeltas: preDeltas, PostDeltas: postDeltas}
 	d.similarityCache = newSimilarityCache(&d)
 	return &d
 }
 
-func (d *Array) PostApply(object interface{}) interface{} {
-	switch object.(type) {
-	case map[string]interface{}:
-		o := object.(map[string]interface{})
-		n := string(d.PostPosition().(Name))
-		o[n] = applyDeltas(d.Deltas, o[n])
-	case []interface{}:
-		o := object.([]interface{})
-		n := int(d.PostPosition().(Index))
-		o[n] = applyDeltas(d.Deltas, o[n])
+func (d *Array) similarity() (similarity float64) {
+	for _, delta := range d.PreDeltas {
+		similarity += delta.Similarity()
 	}
-	return object
+	for _, delta := range d.PostDeltas {
+		similarity += delta.Similarity()
+	}
+
+	return similarity / float64(len(d.PreDeltas)+len(d.PostDeltas))
 }
 
-func (d *Array) similarity() (similarity float64) {
-	similarity = deltasSimilarity(d.Deltas)
-	return
+// WithoutMoves returns internal changes without Moved Deltas.
+// A Moved is decomposed to an Add and a Deleted
+func (d *Array) WithoutMoved() (preDeltas, postDeltas map[int]Delta) {
+	preDeltas = make(map[int]Delta, len(d.PreDeltas))
+	postDeltas = make(map[int]Delta, len(d.PostDeltas))
+
+	for key, delta := range d.PreDeltas {
+		switch dl := delta.(type) {
+		case *Moved:
+			preDeltas[key] = NewDeleted(dl.Value)
+			postDeltas[dl.NewPosition] = NewAdded(dl.Value)
+		default:
+			preDeltas[key] = delta
+		}
+	}
+
+	for key, delta := range d.PostDeltas {
+		postDeltas[key] = delta
+	}
+
+	return preDeltas, postDeltas
 }
 
 // An Added represents a new added field of an object or an array
 type Added struct {
-	postDelta
 	similarityCache
 
-	// Values holds the added value
+	// Value holds the added value
 	Value interface{}
 }
 
 // NewAdded returns a new Added
-func NewAdded(position Position, value interface{}) *Added {
-	d := Added{postDelta: postDelta{position}, Value: value}
+func NewAdded(value interface{}) *Added {
+	d := Added{Value: value}
 	return &d
-}
-
-func (d *Added) PostApply(object interface{}) interface{} {
-	switch object.(type) {
-	case map[string]interface{}:
-		object.(map[string]interface{})[string(d.PostPosition().(Name))] = d.Value
-	case []interface{}:
-		i := int(d.PostPosition().(Index))
-		o := object.([]interface{})
-		if i < len(o) {
-			o = append(o, 0) //dummy
-			copy(o[i+1:], o[i:])
-			o[i] = d.Value
-			object = o
-		} else {
-			object = append(o, d.Value)
-		}
-	}
-
-	return object
 }
 
 func (d *Added) similarity() (similarity float64) {
 	return 0
 }
 
-// A Modified represents a field whose value is changed.
+// A Modified represents a change of a value
 type Modified struct {
-	postDelta
 	similarityCache
 
 	// The value before modification
@@ -258,26 +147,14 @@ type Modified struct {
 }
 
 // NewModified returns a Modified
-func NewModified(position Position, oldValue, newValue interface{}) *Modified {
+func NewModified(oldValue, newValue interface{}) *Modified {
 	d := Modified{
-		postDelta: postDelta{position},
-		OldValue:  oldValue,
-		NewValue:  newValue,
+		OldValue: oldValue,
+		NewValue: newValue,
 	}
 	d.similarityCache = newSimilarityCache(&d)
 	return &d
 
-}
-
-func (d *Modified) PostApply(object interface{}) interface{} {
-	switch object.(type) {
-	case map[string]interface{}:
-		// TODO check old value
-		object.(map[string]interface{})[string(d.PostPosition().(Name))] = d.NewValue
-	case []interface{}:
-		object.([]interface{})[int(d.PostPosition().(Index))] = d.NewValue
-	}
-	return object
 }
 
 func (d *Modified) similarity() (similarity float64) {
@@ -299,6 +176,26 @@ func (d *Modified) similarity() (similarity float64) {
 	return
 }
 
+func stringSimilarity(left, right string) (similarity float64) {
+	matchingLength := float64(
+		lcs.New(
+			stringToInterfaceSlice(left),
+			stringToInterfaceSlice(right),
+		).Length(),
+	)
+	similarity =
+		(matchingLength / float64(len(left))) * (matchingLength / float64(len(right)))
+	return
+}
+
+func stringToInterfaceSlice(str string) []interface{} {
+	s := make([]interface{}, len(str))
+	for i, v := range str {
+		s[i] = v
+	}
+	return s
+}
+
 // A TextDiff represents a Modified with TextDiff between the old and the new values.
 type TextDiff struct {
 	Modified
@@ -308,33 +205,12 @@ type TextDiff struct {
 }
 
 // NewTextDiff returns
-func NewTextDiff(position Position, diff []dmp.Patch, oldValue, newValue interface{}) *TextDiff {
+func NewTextDiff(diff []dmp.Patch, oldValue, newValue interface{}) *TextDiff {
 	d := TextDiff{
-		Modified: *NewModified(position, oldValue, newValue),
+		Modified: *NewModified(oldValue, newValue),
 		Diff:     diff,
 	}
 	return &d
-}
-
-func (d *TextDiff) PostApply(object interface{}) interface{} {
-	switch object.(type) {
-	case map[string]interface{}:
-		o := object.(map[string]interface{})
-		i := string(d.PostPosition().(Name))
-		// TODO error
-		d.OldValue = o[i]
-		// TODO error
-		d.patch()
-		o[i] = d.NewValue
-	case []interface{}:
-		o := object.([]interface{})
-		i := d.PostPosition().(Index)
-		d.OldValue = o[i]
-		// TODO error
-		d.patch()
-		o[i] = d.NewValue
-	}
-	return object
 }
 
 func (d *TextDiff) patch() error {
@@ -359,33 +235,17 @@ func (d *TextDiff) DiffString() string {
 
 // A Delted represents deleted field or index of an Object or an Array.
 type Deleted struct {
-	preDelta
-
 	// The value deleted
 	Value interface{}
 }
 
 // NewDeleted returns a Deleted
-func NewDeleted(position Position, value interface{}) *Deleted {
+func NewDeleted(value interface{}) *Deleted {
 	d := Deleted{
-		preDelta: preDelta{position},
-		Value:    value,
+		Value: value,
 	}
 	return &d
 
-}
-
-func (d *Deleted) PreApply(object interface{}) interface{} {
-	switch object.(type) {
-	case map[string]interface{}:
-		// TODO check old value
-		delete(object.(map[string]interface{}), string(d.PrePosition().(Name)))
-	case []interface{}:
-		i := int(d.PrePosition().(Index))
-		o := object.([]interface{})
-		object = append(o[:i], o[i+1:]...)
-	}
-	return object
 }
 
 func (d Deleted) Similarity() (similarity float64) {
@@ -397,65 +257,35 @@ func (d Deleted) Similarity() (similarity float64) {
 // a single position is not allowed. For the compatibility with jsondiffpatch,
 // the Moved in this library can hold the old and new value in it.
 type Moved struct {
-	preDelta
-	postDelta
-	similarityCache
+	// The indexx moved to
+	NewPosition int
+
 	// The value before moving
 	Value interface{}
 	// The delta applied after moving (for compatibility)
 	Delta interface{}
+
+	similarityCache
 }
 
-func NewMoved(oldPosition Position, newPosition Position, value interface{}, delta Delta) *Moved {
+func NewMoved(newPosition int, value interface{}, delta Delta) *Moved {
 	d := Moved{
-		preDelta:  preDelta{oldPosition},
-		postDelta: postDelta{newPosition},
-		Value:     value,
-		Delta:     delta,
+		NewPosition: newPosition,
+		Value:       value,
+		Delta:       delta,
 	}
 	d.similarityCache = newSimilarityCache(&d)
 	return &d
 }
 
-func (d *Moved) PreApply(object interface{}) interface{} {
-	switch object.(type) {
-	case map[string]interface{}:
-		//not supported
-	case []interface{}:
-		i := int(d.PrePosition().(Index))
-		o := object.([]interface{})
-		d.Value = o[i]
-		object = append(o[:i], o[i+1:]...)
-	}
-	return object
-}
-
-func (d *Moved) PostApply(object interface{}) interface{} {
-	switch object.(type) {
-	case map[string]interface{}:
-		//not supported
-	case []interface{}:
-		i := int(d.PostPosition().(Index))
-		o := object.([]interface{})
-		o = append(o, 0) //dummy
-		copy(o[i+1:], o[i:])
-		o[i] = d.Value
-		object = o
-	}
-
-	if d.Delta != nil {
-		d.Delta.(PostDelta).PostApply(object)
-	}
-
-	return object
-}
-
 func (d *Moved) similarity() (similarity float64) {
 	similarity = 0.6 // as type and contens are same
-	ratio := float64(d.PrePosition().(Index)) / float64(d.PostPosition().(Index))
-	if ratio > 1 {
-		ratio = 1 / ratio
-	}
-	similarity += 0.4 * ratio
+	/*
+		ratio := float64(d.PrePosition().(Index)) / float64(d.PostPosition().(Index))
+		if ratio > 1 {
+			ratio = 1 / ratio
+		}
+		similarity += 0.4 * ratio
+	*/
 	return
 }
