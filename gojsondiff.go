@@ -4,6 +4,7 @@
 package gojsondiff
 
 import (
+	"bytes"
 	"container/list"
 	"encoding/json"
 	"reflect"
