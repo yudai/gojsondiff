@@ -51,12 +51,16 @@ func (differ *Differ) Compare(
 	right []byte,
 ) (Diff, error) {
 	var leftMap, rightMap map[string]interface{}
-	err := json.Unmarshal(left, &leftMap)
+        d := json.NewDecoder(bytes.NewReader(left))
+        d.UseNumber()
+        err := d.Decode(&leftMap)
 	if err != nil {
 		return nil, err
 	}
 
-	err = json.Unmarshal(right, &rightMap)
+	d = json.NewDecoder(bytes.NewReader(right))
+	d.UseNumber()
+	err = d.Decode(&rightMap)
 	if err != nil {
 		return nil, err
 	}
@@ -263,10 +267,10 @@ func (differ *Differ) compareValues(
 
 			if reflect.ValueOf(left).Kind() == reflect.String &&
 				reflect.ValueOf(right).Kind() == reflect.String &&
-				differ.textDiffMinimumLength <= len(left.(string)) {
+				differ.textDiffMinimumLength <= len(reflect.ValueOf(left).String()) {
 
 				textDiff := dmp.New()
-				patchs := textDiff.PatchMake(left.(string), right.(string))
+				patchs := textDiff.PatchMake(reflect.ValueOf(left).String(), reflect.ValueOf(right).String())
 				return false, NewTextDiff(position, patchs, left, right)
 
 			} else {
