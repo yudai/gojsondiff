@@ -94,7 +94,7 @@ func main() {
 					// No error can occur
 				}
 			} else {
-				fmt.Printf("Unknown Foramt %s\n", format)
+				fmt.Printf("Unknown Format %s\n", format)
 				os.Exit(4)
 			}
 
