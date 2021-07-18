@@ -6,7 +6,7 @@ import (
 	"io/ioutil"
 	"os"
 
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v2"
 
 	diff "github.com/yudai/gojsondiff"
 )
@@ -19,15 +19,15 @@ func main() {
 
 	app.Flags = []cli.Flag{}
 
-	app.Action = func(c *cli.Context) {
-		if len(c.Args()) < 2 {
-			fmt.Println("Not enough arguments.\n")
+	app.Action = func(c *cli.Context) error {
+		if c.Args().Len() < 2 {
+			fmt.Println("Not enough arguments.")
 			fmt.Printf("Usage: %s diff json_file\n", app.Name)
 			os.Exit(1)
 		}
 
-		diffFilePath := c.Args()[0]
-		jsonFilePath := c.Args()[1]
+		diffFilePath := c.Args().Get(0)
+		jsonFilePath := c.Args().Get(1)
 
 		// Diff file
 		diffFile, err := ioutil.ReadFile(diffFilePath)
@@ -61,6 +61,7 @@ func main() {
 
 		pachedJson, _ := json.MarshalIndent(jsonObject, "", "  ")
 		fmt.Println(string(pachedJson))
+		return nil
 	}
 
 	app.Run(os.Args)

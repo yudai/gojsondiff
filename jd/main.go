@@ -6,7 +6,7 @@ import (
 	"io/ioutil"
 	"os"
 
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v2"
 
 	diff "github.com/yudai/gojsondiff"
 	"github.com/yudai/gojsondiff/formatter"
@@ -19,33 +19,36 @@ func main() {
 	app.Version = "0.0.2"
 
 	app.Flags = []cli.Flag{
-		cli.StringFlag{
-			Name:   "format, f",
-			Value:  "ascii",
-			Usage:  "Diff Output Format (ascii, delta)",
-			EnvVar: "DIFF_FORMAT",
+		&cli.StringFlag{
+			Name:    "format",
+			Aliases: []string{"f"},
+			Value:   "ascii",
+			Usage:   "Diff Output Format (ascii, delta)",
+			EnvVars: []string{"DIFF_FORMAT"},
 		},
-		cli.BoolFlag{
-			Name:   "coloring, c",
-			Usage:  "Enable coloring in the ASCII mode (not available in the delta mode)",
-			EnvVar: "COLORING",
+		&cli.BoolFlag{
+			Name:    "coloring",
+			Aliases: []string{"c"},
+			Usage:   "Enable coloring in the ASCII mode (not available in the delta mode)",
+			EnvVars: []string{"COLORING"},
 		},
-		cli.BoolFlag{
-			Name:   "quiet, q",
-			Usage:  "Suppress output, if no differences are found",
-			EnvVar: "QUIET",
+		&cli.BoolFlag{
+			Name:    "quiet",
+			Aliases: []string{"q"},
+			Usage:   "Suppress output, if no differences are found",
+			EnvVars: []string{"QUIET"},
 		},
 	}
 
 	app.Action = func(c *cli.Context) error {
-		if len(c.Args()) < 2 {
-			fmt.Println("Not enough arguments.\n")
+		if c.Args().Len() < 2 {
+			fmt.Println("Not enough arguments.")
 			fmt.Printf("Usage: %s json_file another_json_file\n", app.Name)
 			os.Exit(1)
 		}
 
-		aFilePath := c.Args()[0]
-		bFilePath := c.Args()[1]
+		aFilePath := c.Args().Get(0)
+		bFilePath := c.Args().Get(1)
 
 		// Prepare your JSON string as `[]byte`, not `string`
 		aString, err := ioutil.ReadFile(aFilePath)
