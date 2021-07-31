@@ -103,7 +103,7 @@ func (s preDeltas) Less(i, j int) bool {
 	return !s[i].PrePosition().CompareTo(s[j].PrePosition())
 }
 
-// A PreDelta is a Delta that has a position of the right side JSON object.
+// A PostDelta is a Delta that has a position of the right side JSON object.
 // Deltas implements this interface should be applies after PreDeltas.
 type PostDelta interface {
 	// PostPosition returns the Position.
