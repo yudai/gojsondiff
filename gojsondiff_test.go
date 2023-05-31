@@ -1,11 +1,11 @@
 package gojsondiff_test
 
 import (
-	. "github.com/yudai/gojsondiff"
+	. "github.com/mrutkows/gojsondiff"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	. "github.com/yudai/gojsondiff/tests"
+	. "github.com/mrutkows/gojsondiff/tests"
 
 	"io/ioutil"
 )
