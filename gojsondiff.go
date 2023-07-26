@@ -35,13 +35,13 @@ func (diff *diff) Modified() bool {
 
 // A Differ conmapres JSON objects and apply patches
 type Differ struct {
-	textDiffMinimumLength int
+	TextDiffMinimumLength int
 }
 
 // New returns new Differ with default configuration
 func New() *Differ {
 	return &Differ{
-		textDiffMinimumLength: 30,
+		TextDiffMinimumLength: 30,
 	}
 }
 
@@ -263,7 +263,7 @@ func (differ *Differ) compareValues(
 
 			if reflect.ValueOf(left).Kind() == reflect.String &&
 				reflect.ValueOf(right).Kind() == reflect.String &&
-				differ.textDiffMinimumLength <= len(left.(string)) {
+				differ.TextDiffMinimumLength <= len(left.(string)) {
 
 				textDiff := dmp.New()
 				patchs := textDiff.PatchMake(left.(string), right.(string))
