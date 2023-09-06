@@ -1,14 +1,14 @@
 package tests
 
 import (
-	. "github.com/onsi/ginkgo"
-
 	"encoding/json"
-	"io/ioutil"
+	"os"
+
+	. "github.com/onsi/ginkgo"
 )
 
 func LoadFixture(file string) map[string]interface{} {
-	content, err := ioutil.ReadFile(file)
+	content, err := os.ReadFile(file)
 	if err != nil {
 		Fail("Fixture file '" + file + "' not found.")
 	}
@@ -21,7 +21,7 @@ func LoadFixture(file string) map[string]interface{} {
 }
 
 func LoadFixtureAsArray(file string) []interface{} {
-	content, err := ioutil.ReadFile(file)
+	content, err := os.ReadFile(file)
 	if err != nil {
 		Fail("Fixture file '" + file + "' not found.")
 	}

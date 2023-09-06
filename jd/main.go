@@ -3,13 +3,11 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"os"
 
+	diff "git.in.zhihu.com/xingyu97/gojsondiff"
+	"git.in.zhihu.com/xingyu97/gojsondiff/formatter"
 	"github.com/urfave/cli"
-
-	diff "github.com/yudai/gojsondiff"
-	"github.com/yudai/gojsondiff/formatter"
 )
 
 func main() {
@@ -48,14 +46,14 @@ func main() {
 		bFilePath := c.Args()[1]
 
 		// Prepare your JSON string as `[]byte`, not `string`
-		aString, err := ioutil.ReadFile(aFilePath)
+		aString, err := os.ReadFile(aFilePath)
 		if err != nil {
 			fmt.Printf("Failed to open file '%s': %s\n", aFilePath, err.Error())
 			os.Exit(2)
 		}
 
 		// Another JSON string
-		bString, err := ioutil.ReadFile(bFilePath)
+		bString, err := os.ReadFile(bFilePath)
 		if err != nil {
 			fmt.Printf("Failed to open file '%s': %s\n", bFilePath, err.Error())
 			os.Exit(2)

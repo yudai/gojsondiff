@@ -2,9 +2,10 @@ package gojsondiff
 
 import (
 	"errors"
-	dmp "github.com/sergi/go-diff/diffmatchpatch"
 	"reflect"
 	"strconv"
+
+	dmp "github.com/sergi/go-diff/diffmatchpatch"
 )
 
 // A Delta represents an atomic difference between two JSON objects.

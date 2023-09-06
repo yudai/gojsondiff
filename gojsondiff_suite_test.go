@@ -1,10 +1,10 @@
 package gojsondiff_test
 
 import (
+	"testing"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-
-	"testing"
 )
 
 func TestGojsondiff(t *testing.T) {

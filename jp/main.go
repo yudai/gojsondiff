@@ -3,12 +3,10 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"os"
 
+	diff "git.in.zhihu.com/xingyu97/gojsondiff"
 	"github.com/urfave/cli"
-
-	diff "github.com/yudai/gojsondiff"
 )
 
 func main() {
@@ -30,7 +28,7 @@ func main() {
 		jsonFilePath := c.Args()[1]
 
 		// Diff file
-		diffFile, err := ioutil.ReadFile(diffFilePath)
+		diffFile, err := os.ReadFile(diffFilePath)
 		if err != nil {
 			fmt.Printf("Failed to open file '%s': %s\n", diffFilePath, err.Error())
 			os.Exit(2)
@@ -45,7 +43,7 @@ func main() {
 		}
 
 		// JSON file
-		jsonFile, err := ioutil.ReadFile(jsonFilePath)
+		jsonFile, err := os.ReadFile(jsonFilePath)
 		if err != nil {
 			fmt.Printf("Failed to open file '%s': %s\n", jsonFilePath, err.Error())
 			os.Exit(2)

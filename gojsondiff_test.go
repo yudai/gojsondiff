@@ -1,13 +1,12 @@
 package gojsondiff_test
 
 import (
-	. "github.com/yudai/gojsondiff"
+	"os"
 
+	. "git.in.zhihu.com/xingyu97/gojsondiff"
+	. "git.in.zhihu.com/xingyu97/gojsondiff/tests"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	. "github.com/yudai/gojsondiff/tests"
-
-	"io/ioutil"
 )
 
 var _ = Describe("Gojsondiff", func() {
@@ -125,9 +124,9 @@ var _ = Describe("Gojsondiff", func() {
 					diffObj := differ.CompareObjects(aObj, bObj)
 					Expect(diffObj.Modified()).To(BeTrue())
 
-					aStr, err := ioutil.ReadFile(aFile)
+					aStr, err := os.ReadFile(aFile)
 					Expect(err).To(BeNil())
-					bStr, err := ioutil.ReadFile(bFile)
+					bStr, err := os.ReadFile(bFile)
 					Expect(err).To(BeNil())
 
 					diffStr, err := differ.Compare(aStr, bStr)
